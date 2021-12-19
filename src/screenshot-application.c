@@ -25,6 +25,7 @@
 #include <gdk/gdkx.h>
 #include <gdk/gdkkeysyms.h>
 #include <fcntl.h>
+#include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <locale.h>
@@ -391,7 +392,7 @@ screenshot_dialog_response_cb(ScreenshotResponse response,
     g_free(self->priv->save_uri);
     self->priv->save_uri = screenshot_dialog_get_uri(self->priv->dialog);
     screenshot_save_to_file(self);
-    // printf("->uri: %s\n", self->priv->save_uri);
+    printf("->uri: %s\n", self->priv->save_uri);
     break;
   case SCREENSHOT_RESPONSE_COPY:
     screenshot_save_to_clipboard(self);
@@ -404,45 +405,48 @@ screenshot_dialog_response_cb(ScreenshotResponse response,
     self->priv->save_uri = screenshot_dialog_get_uri(self->priv->dialog);
     screenshot_save_to_file(self);
 
-    char str[100];
-    strcpy(str, self->priv->save_path);
-    char name[50];
-    int i;
-    int pLast;
-    int k = 0;
-    int len = strlen(str);
-    for (i = 0; i < strlen(str); i++)
-    {
-      if (str[i] == '/')
-      {
-        pLast = i;
-        printf("i = %d\n", pLast);
-      };
-    }
-    name[k++] = '\'';
-    for (i = pLast + 1; i < strlen(str); i++)
-      name[k++] = str[i];
-    name[k++] = '\'';
-    name[k] = '\0';
-    // g_print("->name: %s\n", name);
-    k = 0;
+    // char str[100];
+    // strcpy(str, self->priv->save_path);
+    // char name[50];
+    // int i;
+    // int pLast;
+    // int k = 0;
+    // int len = strlen(str);
+    // for (i = 0; i < strlen(str); i++)
+    // {
+    //   if (str[i] == '/')
+    //   {
+    //     pLast = i;
+    //     printf("i = %d\n", pLast);
+    //   };
+    // }
+    // name[k++] = '\'';
+    // for (i = pLast + 1; i < strlen(str); i++)
+    //   name[k++] = str[i];
+    // name[k++] = '\'';
+    // name[k] = '\0';
+    // // g_print("->name: %s\n", name);
+    // k = 0;
 
-    for (i = pLast + 1; i < len + 3; i++)
-    {
-      str[i] = name[k++];
-    }
-    str[++i] = '\0';
-    // g_print("->str: %s\n", str);
+    // for (i = pLast + 1; i < len + 3; i++)
+    // {
+    //   str[i] = name[k++];
+    // }
+    // str[++i] = '\0';
+    // // g_print("->str: %s\n", str);
     
     char command[120];
-    strcpy(command,"mypaint ");
-    strcat(command, str);
+    sprintf(command,"mypaint \"%s\"", self->priv->save_path);
     // g_print("->command: %s\n", command);
-
+    
     if (fork() == 0)
     {
       // printf("I'm the child process.\n");
       int status = system(command);
+      if (status < 0)
+      {
+        exit(-1);
+      }
     }
     else
     {
@@ -450,7 +454,9 @@ screenshot_dialog_response_cb(ScreenshotResponse response,
     }
 
     // printf("This is my main program and it will continue running and doing anything i want to...\n");
-    
+    // printf("\n\n->uri: %s\n\n", self->priv->save_uri);
+    // printf("\n\n->uri: %s\n\n", self->priv->save_path);
+
     //
     break;
   default:
@@ -575,7 +581,30 @@ finish_prepare_screenshot(ScreenshotApplication *self,
 
   if (screenshot_config->copy_to_clipboard)
   {
-    screenshot_save_to_clipboard(self);
+    self->priv->save_uri = g_build_filename ("file:///tmp", "temp_file_clipboard.png", NULL);
+    self->priv->should_overwrite = TRUE;
+        // g_application_hold(G_APPLICATION(self));
+    int status = system("rm -f /tmp/temp_file_clipboard.png");
+    if (status < 0)
+    {
+      exit(-1);
+    }
+    g_application_hold(G_APPLICATION(self));
+    screenshot_save_to_file(self);
+
+    // g_application_release(G_APPLICATION(self));
+
+        // g_application_release(G_APPLICATION(self));
+
+        // g_application_hold(G_APPLICATION(self));
+
+    // status = system("rm /tmp/temp_file_clipboard");
+    // if (status < 0)
+    // {
+    //   exit(-1);
+    // }
+    // g_application_release(G_APPLICATION(self));
+
     if (screenshot_config->play_sound)
       screenshot_play_sound_effect("screen-capture", _("Screenshot taken"));
 
@@ -903,7 +932,15 @@ static void
 screenshot_application_finalize(GObject *object)
 {
   ScreenshotApplication *self = SCREENSHOT_APPLICATION(object);
-
+  if (screenshot_config->copy_to_clipboard)
+  {
+    int status = system("xclip -selection clipboard -t image/png -i /tmp/temp_file_clipboard.png && rm -f  /tmp/temp_file_clipboard.png");
+    // printf("\n%d\n", status);
+    if (status < 0)
+    {
+      exit(-1);
+    }
+  }
   g_clear_object(&self->priv->screenshot);
   g_free(self->priv->icc_profile_base64);
   g_free(self->priv->save_uri);
