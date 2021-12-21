@@ -1,2 +1,0 @@
-/home/vuductuyen/Downloads/gnome-screenshot-gnome-3-36/builddir/meson-private/cmake_libcanberra-gtk3/CMakeFiles/rebuild_cache.dir
-/home/vuductuyen/Downloads/gnome-screenshot-gnome-3-36/builddir/meson-private/cmake_libcanberra-gtk3/CMakeFiles/edit_cache.dir
