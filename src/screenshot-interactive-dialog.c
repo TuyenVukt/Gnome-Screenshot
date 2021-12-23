@@ -356,7 +356,7 @@ create_screenshot_frame (GtkWidget   *outer_vbox,
   /** Grab whole screen **/
   group = NULL;
   radio = gtk_radio_button_new_with_mnemonic (group,
-                                              _("Grab the fuckin' the whole screen"));
+                                              _("Grab the whole screen"));
   if (screenshot_config->take_window_shot ||
       screenshot_config->take_area_shot)
     gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (radio), FALSE);

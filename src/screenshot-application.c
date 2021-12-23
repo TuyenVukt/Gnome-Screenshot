@@ -47,7 +47,8 @@ G_DEFINE_TYPE(ScreenshotApplication, screenshot_application, GTK_TYPE_APPLICATIO
 
 static void screenshot_save_to_file(ScreenshotApplication *self);
 static void screenshot_show_interactive_dialog(ScreenshotApplication *self);
-
+int check = 0; 
+pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 struct _ScreenshotApplicationPriv
 {
   gchar *icc_profile_base64;
@@ -385,10 +386,12 @@ static void
 screenshot_dialog_response_cb(ScreenshotResponse response,
                               ScreenshotApplication *self)
 {
+  char command[120];
   switch (response)
   {
   case SCREENSHOT_RESPONSE_SAVE:
     /* update to the new URI */
+    
     g_free(self->priv->save_uri);
     self->priv->save_uri = screenshot_dialog_get_uri(self->priv->dialog);
     screenshot_save_to_file(self);
@@ -401,68 +404,32 @@ screenshot_dialog_response_cb(ScreenshotResponse response,
     screenshot_back(self);
     break;
   case SCREENSHOT_RESPONSE_EDIT:
+    
     g_free(self->priv->save_uri);
     self->priv->save_uri = screenshot_dialog_get_uri(self->priv->dialog);
     screenshot_save_to_file(self);
-
-    // char str[100];
-    // strcpy(str, self->priv->save_path);
-    // char name[50];
-    // int i;
-    // int pLast;
-    // int k = 0;
-    // int len = strlen(str);
-    // for (i = 0; i < strlen(str); i++)
-    // {
-    //   if (str[i] == '/')
-    //   {
-    //     pLast = i;
-    //     printf("i = %d\n", pLast);
-    //   };
-    // }
-    // name[k++] = '\'';
-    // for (i = pLast + 1; i < strlen(str); i++)
-    //   name[k++] = str[i];
-    // name[k++] = '\'';
-    // name[k] = '\0';
-    // // g_print("->name: %s\n", name);
-    // k = 0;
-
-    // for (i = pLast + 1; i < len + 3; i++)
-    // {
-    //   str[i] = name[k++];
-    // }
-    // str[++i] = '\0';
-    // // g_print("->str: %s\n", str);
-    
-    char command[120];
-    sprintf(command,"mypaint \"%s\"", self->priv->save_path);
-    // g_print("->command: %s\n", command);
-    
+    sprintf(command,"pinta \"%s\"", self->priv->save_path);
     if (fork() == 0)
     {
-      // printf("I'm the child process.\n");
-      int status = system(command);
-      if (status < 0)
+      
+      if (system(command) < 0)
       {
         exit(-1);
       }
+      pthread_mutex_lock(&clients_mutex);
+      check = 1;
+      pthread_mutex_unlock(&clients_mutex);
+      exit(-1);
     }
     else
-    {
-      printf("I'm the parent.\n");
-    }
+    {    }
 
-    // printf("This is my main program and it will continue running and doing anything i want to...\n");
-    // printf("\n\n->uri: %s\n\n", self->priv->save_uri);
-    // printf("\n\n->uri: %s\n\n", self->priv->save_path);
-
-    //
     break;
   default:
     g_assert_not_reached();
     break;
   }
+  if(check == 0) g_print("->Can not open Pinta. Maybe Pinta is not installed!! \n" );
   return;
 }
 
