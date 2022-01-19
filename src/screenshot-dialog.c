@@ -142,7 +142,6 @@ static void
 button_clicked (GtkWidget *button, ScreenshotDialog *dialog)
 {
   ScreenshotResponse res;
-   int status;
 
   if (button == dialog->save_button)
       res = SCREENSHOT_RESPONSE_SAVE;

@@ -31,6 +31,7 @@
 #include <locale.h>
 #include <glib/gi18n.h>
 #include <gio/gio.h>
+#include <gtk/gtk.h>
 
 #include "screenshot-application.h"
 #include "screenshot-area-selection.h"
@@ -43,11 +44,50 @@
 
 #define LAST_SAVE_DIRECTORY_KEY "last-save-directory"
 
+/* Event callbacks */
+static gboolean keyPress(GtkWidget *widget, gpointer data);
+static gboolean sizeChanged(GtkWidget *widget, GtkAllocation *allocation, gpointer data);
+
+static GtkWidget *image; /* As displayed on the screen */
+
 G_DEFINE_TYPE(ScreenshotApplication, screenshot_application, GTK_TYPE_APPLICATION);
+void destroy_widget(GtkButton *button, GtkWidget *widget){
+  gtk_widget_destroy(widget);
+  exit(0);
+}
+void showArlert()
+{
+  GtkWidget *window, *label, *button_ok, *grid;
+  gtk_init(0, 0);
+  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_title(GTK_WINDOW(window), "Problem with Pinta!!");
+  gtk_window_set_default_size(GTK_WINDOW(window),400, 200);
+  label = gtk_label_new("Cannot open Pinta!!!\nMay be Pinta was not installed.\nYou can search Pinta on software market.\n");
+  button_ok = gtk_button_new_with_label("OK");  
+  gtk_widget_set_size_request(button_ok, 70, 30);          
+  g_signal_connect(window, "delete-event", G_CALLBACK(gtk_main_quit), NULL);
+  g_signal_connect(button_ok, "clicked", G_CALLBACK(destroy_widget), window);
+  
+  grid = gtk_grid_new ();
+  gtk_grid_attach(GTK_GRID (grid), label, 0, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID (grid), button_ok, 0, 1, 1, 1);
+  gtk_widget_set_size_request(button_ok, 70, 30);  
+  gtk_container_add(GTK_CONTAINER(window), grid);
+  gtk_widget_set_vexpand (label, TRUE);
+    gtk_widget_set_hexpand (label, TRUE);
+    //  gtk_widget_set_vexpand (button_ok, TRUE);
+    // gtk_widget_set_hexpand (button_ok, TRUE);
+
+
+  gtk_widget_show_all(window);
+  gtk_main();
+}
+
+
 
 static void screenshot_save_to_file(ScreenshotApplication *self);
 static void screenshot_show_interactive_dialog(ScreenshotApplication *self);
-int check = 0; 
+
 pthread_mutex_t clients_mutex = PTHREAD_MUTEX_INITIALIZER;
 struct _ScreenshotApplicationPriv
 {
@@ -368,7 +408,7 @@ screenshot_back(ScreenshotApplication *self)
 }
 
 static void
-screenshot_save_to_clipboard(ScreenshotApplication *self) //ham luu vao clipbo
+screenshot_save_to_clipboard(ScreenshotApplication *self) // ham luu vao clipbo
 {
   GtkClipboard *clipboard;
 
@@ -381,6 +421,136 @@ screenshot_save_to_clipboard(ScreenshotApplication *self) //ham luu vao clipbo
   gtk_clipboard_set_image(clipboard, self->priv->screenshot);
   g_print("----clipboard\n");
 }
+/* Callback functions */
+
+/* Check for Control-Q and quit if it was pressed */
+static gboolean
+keyPress(GtkWidget *widget, gpointer data)
+{
+  GdkEventKey *event = (GdkEventKey *)data;
+
+  if (event->keyval == GDK_KEY_q && (event->state & GDK_CONTROL_MASK))
+  {
+    gtk_main_quit();
+    return FALSE;
+  }
+  else
+    return TRUE;
+}
+
+/* If the window has been resized, that resizes the scrolledwindow,
+ * and we scale the image to the dimensions of the scrolledwindow so that
+ * the scrollbars disappear again. Yuk! */
+static gboolean
+sizeChanged(GtkWidget *widget, GtkAllocation *allocation, gpointer data)
+{
+  GdkPixbuf *sourcePixbuf = data; /* As read from a file */
+  GdkPixbuf *imagePixbuf;         /* pixbuf of the on-screen image */
+
+  imagePixbuf = gtk_image_get_pixbuf(GTK_IMAGE(image));
+  if (imagePixbuf == NULL)
+  {
+    g_message("Can't get on-screen pixbuf");
+    return TRUE;
+  }
+  /* Recreate the displayed image if the image size has changed. */
+  if (allocation->width != gdk_pixbuf_get_width(imagePixbuf) ||
+      allocation->height != gdk_pixbuf_get_height(imagePixbuf))
+  {
+
+    gtk_image_set_from_pixbuf(
+        GTK_IMAGE(image),
+        gdk_pixbuf_scale_simple(sourcePixbuf,
+                                allocation->width,
+                                allocation->height,
+                                GDK_INTERP_BILINEAR));
+    g_object_unref(imagePixbuf); /* Free the old one */
+  }
+
+  return FALSE;
+}
+void zoom(GtkWidget *button,ScreenshotApplication *self){
+  GtkWidget *window;
+    GtkWidget *viewport;
+    GdkPixbuf *sourcePixbuf = NULL; /* As read from a file */
+    // char filename[200]= "/home/viet132pham/Pictures/Screenshot from 2022-01-08 22-58-57.png";
+    // char *filename2 = "/home/viet132pham/Pictures/tuyen.png";
+    int n = 1;
+  gtk_init(&n , NULL);
+
+    /* Make pixbuf, then make image from pixbuf because
+     * gtk_image_new_from_file() doesn't flag errors */
+      GError *error = NULL;
+    // while(1)
+    // {
+      sourcePixbuf = gdk_pixbuf_new_from_file(self->priv->save_path, &error);
+      if (sourcePixbuf == NULL)
+      {
+        g_message("%s", error->message);
+      }
+    // }
+
+    /* On expose/resize, the image's pixbuf will be overwritten
+     * but we will still need the original image so take a copy of it */
+    image = gtk_image_new_from_pixbuf(gdk_pixbuf_copy(sourcePixbuf));
+
+    viewport = gtk_scrolled_window_new(NULL, NULL);
+    /* Saying "1x1" reduces the window's minumum size from 55x55 to 42x42. */
+    gtk_scrolled_window_set_min_content_width(GTK_SCROLLED_WINDOW(viewport), 1);
+    gtk_scrolled_window_set_min_content_height(GTK_SCROLLED_WINDOW(viewport), 1);
+
+    window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+    gtk_window_set_title(GTK_WINDOW(window), "image1-gtk3");
+
+    /* Quit if they ask the window manager to close the window */
+    g_signal_connect(G_OBJECT(window), "destroy",
+                     G_CALLBACK(gtk_main_quit), NULL);
+    /* Quit on control-Q. */
+    g_signal_connect(window, "key-press-event", G_CALLBACK(keyPress), NULL);
+
+    /* When the window is resized, scale the image to fit */
+    g_signal_connect(viewport, "size-allocate",
+                     G_CALLBACK(sizeChanged), sourcePixbuf);
+
+    /* The image is in a scrolled window container so that the main window
+     * can be resized smaller than the current image. */
+    gtk_container_add(GTK_CONTAINER(viewport), image);
+    gtk_container_add(GTK_CONTAINER(window), viewport);
+
+    //gtk_window_set_resizable(GTK_WINDOW(window), 1);
+    /* Open the window the same size as the image */
+    gtk_window_set_default_size(GTK_WINDOW(window),
+                                gdk_pixbuf_get_width(sourcePixbuf),
+                                gdk_pixbuf_get_height(sourcePixbuf));
+
+    gtk_widget_show_all(window);
+
+    gtk_main();
+}
+void create_open_image(ScreenshotApplication *self){
+  // GtkWidget *grid;
+  GtkWidget* button;
+  GtkWidget* window;
+ 
+  gtk_init(0, 0);
+
+  window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  // grid = gtk_grid_new();
+  gtk_window_set_position(GTK_WINDOW(window), GTK_WIN_POS_CENTER);
+
+  gtk_window_set_title(GTK_WINDOW(window), "After_save");
+  
+  gtk_window_set_default_size(GTK_WINDOW(window), 400, 200);
+  button = gtk_button_new_with_label ( "If you want open image: Click" );
+  // gtk_grid_attach ( GTK_GRID ( grid ), button, 0, 0, 1, 1 );
+  gtk_container_add(GTK_CONTAINER(window),button);
+  printf("\nDAY LA FILE NAME : %s\n",self->priv->save_path);
+  g_signal_connect ( button,    "clicked", G_CALLBACK ( zoom ),self);
+  g_signal_connect(window, "destroy", gtk_main_quit, 0);
+  gtk_widget_show_all(window);
+  
+  gtk_main();
+}
 
 static void
 screenshot_dialog_response_cb(ScreenshotResponse response,
@@ -391,11 +561,12 @@ screenshot_dialog_response_cb(ScreenshotResponse response,
   {
   case SCREENSHOT_RESPONSE_SAVE:
     /* update to the new URI */
-    
+
     g_free(self->priv->save_uri);
     self->priv->save_uri = screenshot_dialog_get_uri(self->priv->dialog);
     screenshot_save_to_file(self);
     printf("->uri: %s\n", self->priv->save_uri);
+    create_open_image(self);
     break;
   case SCREENSHOT_RESPONSE_COPY:
     screenshot_save_to_clipboard(self);
@@ -404,32 +575,36 @@ screenshot_dialog_response_cb(ScreenshotResponse response,
     screenshot_back(self);
     break;
   case SCREENSHOT_RESPONSE_EDIT:
-    
-    g_free(self->priv->save_uri);
+  g_free(self->priv->save_uri);
     self->priv->save_uri = screenshot_dialog_get_uri(self->priv->dialog);
     screenshot_save_to_file(self);
     sprintf(command,"pinta \"%s\"", self->priv->save_path);
-    if (fork() == 0)
+    if(screenshot_config->pinta_check == FALSE){
+      showArlert();
+      exit(0);
+    }else{
+      if (fork() == 0)
     {
-      
       if (system(command) < 0)
       {
         exit(-1);
       }
-      pthread_mutex_lock(&clients_mutex);
-      check = 1;
-      pthread_mutex_unlock(&clients_mutex);
       exit(-1);
     }
     else
     {    }
 
+    }
+    
+    break;
+    
     break;
   default:
     g_assert_not_reached();
     break;
   }
-  if(check == 0) g_print("->Can not open Pinta. Maybe Pinta is not installed!! \n" );
+//  printf("Check: %d\n", check); 
+//  showArlert();
   return;
 }
 
@@ -548,9 +723,9 @@ finish_prepare_screenshot(ScreenshotApplication *self,
 
   if (screenshot_config->copy_to_clipboard)
   {
-    self->priv->save_uri = g_build_filename ("file:///tmp", "temp_file_clipboard.png", NULL);
+    self->priv->save_uri = g_build_filename("file:///tmp", "temp_file_clipboard.png", NULL);
     self->priv->should_overwrite = TRUE;
-        // g_application_hold(G_APPLICATION(self));
+    // g_application_hold(G_APPLICATION(self));
     int status = system("rm -f /tmp/temp_file_clipboard.png");
     if (status < 0)
     {
@@ -561,9 +736,9 @@ finish_prepare_screenshot(ScreenshotApplication *self,
 
     // g_application_release(G_APPLICATION(self));
 
-        // g_application_release(G_APPLICATION(self));
+    // g_application_release(G_APPLICATION(self));
 
-        // g_application_hold(G_APPLICATION(self));
+    // g_application_hold(G_APPLICATION(self));
 
     // status = system("rm /tmp/temp_file_clipboard");
     // if (status < 0)
