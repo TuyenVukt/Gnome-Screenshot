@@ -12,3 +12,5 @@ desktop; the currently focused window; or an area of the screen.
  - X11
  - mypaint
  - xclip
+
+Recommend run ninja install to update my new gsetting gschemas
