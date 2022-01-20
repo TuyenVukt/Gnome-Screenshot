@@ -42,7 +42,7 @@ typedef struct {
 
   gboolean include_border;
   gchar *border_effect;
-
+  gchar *sound;
   gboolean play_sound;//play sound or not 
 
   guint delay;

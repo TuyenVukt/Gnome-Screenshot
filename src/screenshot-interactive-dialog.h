@@ -24,6 +24,7 @@
 #define __SCREENSHOT_INTERACTIVE_DIALOG_H__
 
 #include <gtk/gtk.h>
+#include <string.h>
 
 typedef void (*CaptureClickedCallback) (gpointer *user_data);
 
