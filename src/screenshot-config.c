@@ -34,6 +34,7 @@
 #define AUTO_SAVE_DIRECTORY_KEY "auto-save-directory"
 #define LAST_SAVE_DIRECTORY_KEY "last-save-directory"
 #define DEFAULT_FILE_TYPE_KEY   "default-file-type"
+#define HAS_SOUND               "has-sounds"
 
 ScreenshotConfig *screenshot_config;
 
@@ -72,7 +73,9 @@ screenshot_load_config (void)
 
   config->take_window_shot = FALSE;
   config->take_area_shot = FALSE;
-  config->play_sound = TRUE;
+  config->play_sound = 
+    g_settings_get_boolean (config->settings,
+                            HAS_SOUND);;
 
   screenshot_config = config;
 }
@@ -96,7 +99,10 @@ screenshot_save_config (void)
                           INCLUDE_POINTER_KEY, c->include_pointer);
   g_settings_set_string (c->settings,
                          BORDER_EFFECT_KEY, c->border_effect);
-
+  g_settings_set_string (c->settings,
+                         BORDER_EFFECT_KEY, c->border_effect);
+  g_settings_set_boolean (c->settings,
+                         HAS_SOUND, c->play_sound);
   if (!c->take_area_shot)
     g_settings_set_int (c->settings, DELAY_KEY, c->delay);
 }

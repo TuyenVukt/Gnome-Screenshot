@@ -36,6 +36,11 @@
       <summary>Include Pointer</summary>
       <description>Include the pointer in the screenshot</description>
     </key>
+    <key name="has-sounds" type="b">
+      <default>true</default>
+      <summary>Has sound</summary>
+      <description>Screenshot can play sound</description>
+    </key>
     <key name="include-icc-profile" type="b">
       <default>true</default>
       <summary>Include ICC Profile</summary>
