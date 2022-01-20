@@ -231,6 +231,7 @@ create_effects_combo (void)
   return retval;
 }
 
+
 static void
 create_effects_frame (GtkWidget   *outer_vbox,
                       const gchar *frame_title)
@@ -314,6 +315,7 @@ create_effects_frame (GtkWidget   *outer_vbox,
   gtk_label_set_mnemonic_widget (GTK_LABEL (label), combo);
   gtk_widget_show (combo);
   effect_combo = combo;
+
 }
 
 static void
@@ -474,6 +476,7 @@ screenshot_interactive_dialog_new (CaptureClickedCallback f, gpointer user_data)
 
   create_screenshot_frame (main_vbox, _("Take Screenshot"));
   create_effects_frame (main_vbox, _("Effects"));
+
 
   size_group = gtk_size_group_new (GTK_SIZE_GROUP_HORIZONTAL);
 
