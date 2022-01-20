@@ -51,6 +51,11 @@
       <summary>Border Effect</summary>
       <description>Effect to add to the outside of a border.  Possible values are “shadow”, “none”, and “border”.</description>
     </key>
+    <key name="sound" type="s">
+      <default>'screen-capture'</default>
+      <summary>Sound</summary>
+      <description>Sound play when screenshot</description>
+    </key>
     <key name="default-file-type" enum="org.gnome.gnome-screenshot.file-types">
       <default>'png'</default>
       <summary>Default file type extension</summary>

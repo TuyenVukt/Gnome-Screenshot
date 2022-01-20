@@ -35,7 +35,7 @@
 #define LAST_SAVE_DIRECTORY_KEY "last-save-directory"
 #define DEFAULT_FILE_TYPE_KEY   "default-file-type"
 #define HAS_SOUND               "has-sounds"
-
+#define SOUND_KEY               "sound"
 ScreenshotConfig *screenshot_config;
 
 void
@@ -61,6 +61,9 @@ screenshot_load_config (void)
   config->border_effect =
     g_settings_get_string (config->settings,
                            BORDER_EFFECT_KEY);
+  config->sound =
+    g_settings_get_string (config->settings,
+                           SOUND_KEY);
   config->file_type =
     g_settings_get_string (config->settings,
                            DEFAULT_FILE_TYPE_KEY);
@@ -70,7 +73,8 @@ screenshot_load_config (void)
 
   if (config->border_effect == NULL)
     config->border_effect = g_strdup ("none");
-
+  if (config->sound == NULL)
+    config->border_effect = g_strdup ("none");
   config->take_window_shot = FALSE;
   config->take_area_shot = FALSE;
 
@@ -102,9 +106,9 @@ screenshot_save_config (void)
   g_settings_set_string (c->settings,
                          BORDER_EFFECT_KEY, c->border_effect);
   g_settings_set_string (c->settings,
-                         BORDER_EFFECT_KEY, c->border_effect);
+                         SOUND_KEY, c->sound);
   g_settings_set_boolean (c->settings,
-                         HAS_SOUND, c->play_sound);
+                         HAS_SOUND, TRUE);
   if (!c->take_area_shot)
     g_settings_set_int (c->settings, DELAY_KEY, c->delay);
 }

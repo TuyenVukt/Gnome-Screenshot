@@ -32,6 +32,8 @@
 static GtkWidget *border_check = NULL;
 static GtkWidget *effect_combo = NULL;
 static GtkWidget *effect_label = NULL;
+static GtkWidget *sound_combo = NULL;
+static GtkWidget *sound_label = NULL;
 static GtkWidget *effects_vbox = NULL;
 static GtkWidget *delay_hbox = NULL;
 
@@ -50,6 +52,23 @@ typedef enum {
   SCREENSHOT_EFFECT_BORDER,
   SCREENSHOT_EFFECT_VINTAGE
 } ScreenshotEffectType;
+
+typedef enum {
+  SCREEN_CAPTURE,
+  NONE,
+  NETWORK_CONNECTIVITY_LOST,
+  DIALOG_ERROR,
+  BATTERY_LOW,
+  SUSPEND_ERROR,
+  POWER_UNPLUG_BATTERY_LOW,
+  MESSAGE_NEW_INSTANT,
+  MESSAGE_NEW_EMAIL,
+  PHONE_INCOMING_CALL,
+  BELL_TERMINAL,
+  MESSAGE_SENT_EMAIL,
+  TRASH_EMPTY,
+  ALARM_CLOCK_ELAPSED
+} ScreenshotSoundType;
 
 #define TARGET_TOGGLE_DESKTOP 0
 #define TARGET_TOGGLE_WINDOW  1
@@ -99,12 +118,12 @@ include_pointer_toggled_cb (GtkToggleButton *button,
   screenshot_config->include_pointer = gtk_toggle_button_get_active (button);
 }
 
-static void 
-play_sound_toggled_cd (GtkToggleButton *button,
-                            gpointer         data)
-{
-  screenshot_config->play_sound = gtk_toggle_button_get_active (button);
-}
+// static void 
+// play_sound_toggled_cd (GtkToggleButton *button,
+//                             gpointer         data)
+// {
+//   screenshot_config->play_sound = gtk_toggle_button_get_active (button);
+// }
 
 static void
 effect_combo_changed_cb (GtkComboBox *combo,
@@ -124,6 +143,27 @@ effect_combo_changed_cb (GtkComboBox *combo,
 
       g_free (screenshot_config->border_effect);
       screenshot_config->border_effect = effect; /* gets free'd later */
+    }
+}
+
+static void
+sound_combo_changed_cb (GtkComboBox *combo,
+                         gpointer     user_data)
+{
+  GtkTreeIter iter;
+
+  if (gtk_combo_box_get_active_iter (combo, &iter))
+    {
+      GtkTreeModel *model;
+      gchar *sound;
+
+      model = gtk_combo_box_get_model (combo);
+      gtk_tree_model_get (model, &iter, COLUMN_NICK, &sound, -1);
+
+      g_assert (sound != NULL);
+
+      g_free (screenshot_config->sound);
+      screenshot_config->sound = sound; /* gets free'd later */
     }
 }
 
@@ -232,6 +272,148 @@ create_effects_combo (void)
 }
 
 
+
+
+typedef struct {
+  ScreenshotSoundType id;
+  const gchar *label;
+  const gchar *nick;
+} ScreenshotSound;
+
+static const ScreenshotEffect sound[] = {
+  /* Translators:
+   * these are the names of the effects available which will be
+   * displayed inside a combo box in interactive mode for the user
+   * to chooser.
+   */
+  { SCREEN_CAPTURE, N_("Screen capture"), "screen-capture" },
+  { NONE, N_("None"), "none" },
+  { NETWORK_CONNECTIVITY_LOST, N_("Network connectivity lost"), "network-connectivity-lost" },
+  { DIALOG_ERROR, N_("Dialog error"), "dialog-error" },
+  { BATTERY_LOW, N_("Battery low"), "battery-low" },
+  { SUSPEND_ERROR, N_("Suspend error"), "suspend-error" },
+  { POWER_UNPLUG_BATTERY_LOW, N_("Power unplug battery low"), "power-unplug-battery-low" },
+  { MESSAGE_NEW_INSTANT, N_("Message new instant"), "message-new-instant" },
+  { MESSAGE_NEW_EMAIL, N_("Message new email"), "message-new-email" },
+  { PHONE_INCOMING_CALL, N_("Phone incoming call"), "phone-incoming-call" },
+  { BELL_TERMINAL, N_("Bell terminal"), "bell-terminal" },
+  { MESSAGE_SENT_EMAIL, N_("Message sent email"), "message-sent-email" },
+  { TRASH_EMPTY, N_("Trash empty"), "trash-empty" },
+  { ALARM_CLOCK_ELAPSED, N_("Alarm clock elapsed"), "alarm-clock-elapsed" }
+};
+
+static guint n_sound = G_N_ELEMENTS (sound);
+
+static GtkWidget *
+create_sound_combo (void)
+{
+  g_autoptr(GtkListStore) model = NULL;
+  GtkWidget *retval;
+  GtkCellRenderer *renderer;
+  gint i;
+
+  model = gtk_list_store_new (N_COLUMNS,
+                              G_TYPE_STRING,
+                              G_TYPE_STRING,
+                              G_TYPE_UINT);
+
+  for (i = 0; i < n_sound; i++)
+    {
+      GtkTreeIter iter;
+
+      gtk_list_store_insert (model, &iter, i);
+      gtk_list_store_set (model, &iter,
+                          COLUMN_ID, sound[i].id,
+                          COLUMN_LABEL, gettext (sound[i].label),
+                          COLUMN_NICK, sound[i].nick,
+                          -1);
+    }
+
+  retval = gtk_combo_box_new ();
+  gtk_combo_box_set_model (GTK_COMBO_BOX (retval),
+                           GTK_TREE_MODEL (model));
+
+  // switch (screenshot_config->sound[0])
+  //   {
+  //   case 's': /* shadow */
+  //     gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+  //                               SCREENSHOT_EFFECT_SHADOW);
+  //     break;
+  //   case 'b': /* border */
+  //     gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+  //                               SCREENSHOT_EFFECT_BORDER);
+  //     break;
+  //   case 'v': /* vintage */
+  //     gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+  //                               SCREENSHOT_EFFECT_VINTAGE);
+  //     break;
+  //   case 'n': /* none */
+  //     gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+  //                               SCREENSHOT_EFFECT_NONE);
+  //     break;
+  //   default:
+  //     break;
+  //   }
+  if (!strcmp(screenshot_config->sound, "screen-capture"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                SCREEN_CAPTURE);
+  else if (!strcmp(screenshot_config->sound, "none"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                NONE);
+  else if (!strcmp(screenshot_config->sound, "network-connectivity-lost"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                NETWORK_CONNECTIVITY_LOST);
+  else if (!strcmp(screenshot_config->sound, "dialog-error"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                DIALOG_ERROR); 
+  else if (!strcmp(screenshot_config->sound, "battery-low"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                BATTERY_LOW);                            
+  else if (!strcmp(screenshot_config->sound, "suspend-error"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                SUSPEND_ERROR);                            
+  else if (!strcmp(screenshot_config->sound, "power-unplug-battery-low"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                POWER_UNPLUG_BATTERY_LOW);                            
+  else if (!strcmp(screenshot_config->sound, "message-new-instant"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                MESSAGE_NEW_INSTANT);                            
+  else if (!strcmp(screenshot_config->sound, "message-new-email"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                MESSAGE_NEW_EMAIL);                            
+  else if (!strcmp(screenshot_config->sound, "phone-incoming-call"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                PHONE_INCOMING_CALL);      
+  else if (!strcmp(screenshot_config->sound, "bell-terminal"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                BELL_TERMINAL);      
+  else if (!strcmp(screenshot_config->sound, "message-sent-email"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                MESSAGE_SENT_EMAIL);      
+  else if (!strcmp(screenshot_config->sound, "trash-empty"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                TRASH_EMPTY); 
+  else if (!strcmp(screenshot_config->sound, "alarm-clock-elapsed"))
+    gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                ALARM_CLOCK_ELAPSED);   
+  else gtk_combo_box_set_active (GTK_COMBO_BOX (retval),
+                                SCREEN_CAPTURE); 
+
+
+  renderer = gtk_cell_renderer_text_new ();
+  gtk_cell_layout_pack_start (GTK_CELL_LAYOUT (retval), renderer, TRUE);
+  gtk_cell_layout_set_attributes (GTK_CELL_LAYOUT (retval), renderer,
+                                  "text", COLUMN_LABEL,
+                                  NULL);
+
+  g_signal_connect (retval, "changed",
+                    G_CALLBACK (sound_combo_changed_cb),
+                    NULL);
+
+  return retval;
+}
+
+
 static void
 create_effects_frame (GtkWidget   *outer_vbox,
                       const gchar *frame_title)
@@ -264,14 +446,14 @@ create_effects_frame (GtkWidget   *outer_vbox,
   gtk_widget_set_margin_start (vbox, 12);
   gtk_widget_show (vbox);
   // play_sound
-  check = gtk_check_button_new_with_mnemonic (_("Play _Sound"));
-  gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (check),
-                                screenshot_config->play_sound);
-  g_signal_connect (check, "toggled",
-                    G_CALLBACK (play_sound_toggled_cd),
-                    NULL);
-  gtk_box_pack_start (GTK_BOX (vbox), check, FALSE, FALSE, 0);
-  gtk_widget_show (check);
+  // check = gtk_check_button_new_with_mnemonic (_("Play _Sound"));
+  // gtk_toggle_button_set_active (GTK_TOGGLE_BUTTON (check),
+  //                               screenshot_config->play_sound);
+  // g_signal_connect (check, "toggled",
+  //                   G_CALLBACK (play_sound_toggled_cd),
+  //                   NULL);
+  // gtk_box_pack_start (GTK_BOX (vbox), check, FALSE, FALSE, 0);
+  // gtk_widget_show (check);
 
   /** Include pointer **/
   check = gtk_check_button_new_with_mnemonic (_("Include _pointer"));
@@ -316,6 +498,29 @@ create_effects_frame (GtkWidget   *outer_vbox,
   gtk_widget_show (combo);
   effect_combo = combo;
 
+  //sound
+  hbox = gtk_box_new (GTK_ORIENTATION_HORIZONTAL, 12);
+
+  vbox = gtk_box_new (GTK_ORIENTATION_VERTICAL, 6);
+  gtk_box_pack_start (GTK_BOX (outer_vbox), vbox, FALSE, FALSE, 0);
+  gtk_widget_show (vbox);
+
+
+  gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE, 0);
+  gtk_widget_show (hbox);
+
+  label = gtk_label_new_with_mnemonic (_("Apply _sound:"));
+  gtk_widget_set_halign (label, GTK_ALIGN_START);
+  gtk_widget_set_valign (label, GTK_ALIGN_CENTER);
+  gtk_box_pack_start (GTK_BOX (hbox), label, FALSE, FALSE, 0);
+  gtk_widget_show (label);
+  sound_label = label;
+
+  combo = create_sound_combo ();
+  gtk_box_pack_start (GTK_BOX (hbox), combo, FALSE, FALSE, 0);
+  gtk_label_set_mnemonic_widget (GTK_LABEL (label), combo);
+  gtk_widget_show (combo);
+  sound_combo = combo;
 }
 
 static void

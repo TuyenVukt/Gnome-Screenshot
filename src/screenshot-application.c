@@ -652,7 +652,7 @@ build_filename_ready_cb(GObject *source,
     return;
   }
   if (screenshot_config->play_sound)
-    screenshot_play_sound_effect("screen-capture", _("Screenshot taken"));
+    screenshot_play_sound_effect(screenshot_config->sound, _("Screenshot taken"));
 
   if (screenshot_config->interactive)
   {
@@ -748,7 +748,7 @@ finish_prepare_screenshot(ScreenshotApplication *self,
     // g_application_release(G_APPLICATION(self));
 
     if (screenshot_config->play_sound)
-      screenshot_play_sound_effect("screen-capture", _("Screenshot taken"));
+      screenshot_play_sound_effect(screenshot_config->sound, _("Screenshot taken"));
 
     if (screenshot_config->file == NULL)
     {
