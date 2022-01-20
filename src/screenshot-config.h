@@ -47,6 +47,10 @@ typedef struct {
 
   guint delay;
 
+  gboolean pinta_check;
+  gboolean gthump_check;
+  
+
   gboolean interactive;
 } ScreenshotConfig;
 

@@ -77,8 +77,12 @@ screenshot_load_config (void)
     config->border_effect = g_strdup ("none");
   config->take_window_shot = FALSE;
   config->take_area_shot = FALSE;
-  config->play_sound = TRUE;
 
+  config->play_sound = 
+    g_settings_get_boolean (config->settings,
+                            HAS_SOUND);;
+  if(system("pinta -v") != 0 ) config->pinta_check = FALSE;
+  else config->pinta_check = TRUE;
   screenshot_config = config;
 }
 
